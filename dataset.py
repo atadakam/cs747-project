@@ -25,14 +25,12 @@ class DistractedDriverDataset(Dataset):
 	def __init__(self, annotation_path, data_dir, transform=None):
 		self.annotation = pd.read_csv(annotation_path)
 		self.data_dir = data_dir
-		self.train = train
 		self.transform = transform
 
 	def __len__(self):
 		return len(self.annotation)
 
 	def __getitem__(self, idx):
-		if self.train:
 		img_name = self.annotation.iloc[idx]['img']
 		label = self.annotation.iloc[idx]['classname']
 		# subject = self.annotation.iloc[idx]['subject']
