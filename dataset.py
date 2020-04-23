@@ -5,11 +5,10 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import transforms, utils
 from torch.utils.data import Dataset, DataLoader
+import torch
 
 
-class DistractedDriverDataset(Dataset):
-
-	CLASSES = {
+CLASSES = {
 				'c0': 'safe driving',
 				'c1': 'texting - right',
 				'c2': 'talking on the phone - right',
@@ -22,19 +21,21 @@ class DistractedDriverDataset(Dataset):
 				'c9': 'talking to passenger'
 				}
 
+class DistractedDriverDataset(Dataset):
+
+
 	def __init__(self, annotation_path, data_dir, transform=None):
 		self.annotation = pd.read_csv(annotation_path)
 		self.data_dir = data_dir
-		self.train = train
 		self.transform = transform
 
 	def __len__(self):
 		return len(self.annotation)
 
 	def __getitem__(self, idx):
-		if self.train:
 		img_name = self.annotation.iloc[idx]['img']
 		label = self.annotation.iloc[idx]['classname']
+		label_int = torch.tensor(int(label[1]))
 		# subject = self.annotation.iloc[idx]['subject']
 		img_path = os.path.join(self.data_dir, label, img_name)
 		img = Image.open(img_path)
@@ -42,7 +43,7 @@ class DistractedDriverDataset(Dataset):
 		if self.transform:
 			img = self.transform(img)
 
-		return img, label
+		return img, label_int
 
 	def summary(self):
 		count = 0
