@@ -20,9 +20,13 @@ from torch.utils.tensorboard import SummaryWriter
 #             transforms.ToTensor(),
 #             normalize])
 
+batch_size = 32
+num_epochs = 2
+learning_rate = 0.0001
+
 def load_data():
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std= [0.229, 0.224, 0.225])
+                                     std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
             transforms.RandomResizedCrop(227, scale=(0.5, 1.0)),
             transforms.ToTensor(),
@@ -98,6 +102,7 @@ def train_resnet():
 
         print('Saving the model')
         torch.save(resnet18.state_dict(), os.path.join('models', f'resnet18_{T}_{run_time}.pt'))
+
 
 if __name__ == '__main__':
     train_resnet()

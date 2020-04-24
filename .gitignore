@@ -6,8 +6,9 @@ __pycache__/
 # Dataset
 state-farm-distracted-driver-detection/
 
-# Tensorboard runs
+# Tensorboard runs and models
 runs/
+models/
 
 # Pycharm
 .idea/
