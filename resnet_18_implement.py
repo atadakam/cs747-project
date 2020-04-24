@@ -14,35 +14,33 @@ from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 
 # Transforms applied to the training data
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std= [0.229, 0.224, 0.225])
 
-train_transform = transforms.Compose([
+
+# test_transform = transforms.Compose([ transforms.Resize(227),
+#             transforms.ToTensor(),
+#             normalize])
+
+def load_data():
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std= [0.229, 0.224, 0.225])
+    train_transform = transforms.Compose([
             transforms.RandomResizedCrop(227, scale=(0.5, 1.0)),
             transforms.ToTensor(),
             normalize
         ])
 
-test_transform = transforms.Compose([ transforms.Resize(227),
-            transforms.ToTensor(),
-            normalize])
-
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
-
-
-def load_data():
     train_dataset = DistractedDriverDataset(annotation_path, train_dir, transform=train_transform)
     num_train = int(len(train_dataset)*0.8)
     lengths = [num_train, len(train_dataset)-num_train]
     train, val = random_split(train_dataset, lengths)
-    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=8)
-    val_loader = DataLoader(val, batch_size=batch_size, shuffle=True, num_workers=8)
+    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=False)
     return train_loader, val_loader
 
 
 def train_resnet():
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     train_loader, val_loader = load_data()
     # Train model
     resnet18 = models.resnet18(pretrained=True)
@@ -57,12 +55,13 @@ def train_resnet():
     for epoch in range(1, num_epochs + 1):
         print(f'Starting epoch {epoch}')
         resnet18.train()
+        
         for i, (images, labels) in tqdm.tqdm(enumerate(train_loader), total=len(train_loader)):
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
             logits = resnet18(images)
             predict = F.log_softmax(logits/T, dim=1)
-            pred_max = torch.argmax(predict.data, dim = 1)
+            pred_max = torch.argmax(predict, dim = 1)
             loss = criterion(predict, labels)
             loss.backward()
             optimizer.step()
@@ -72,34 +71,33 @@ def train_resnet():
             # print(f'Accuracy {accuracy}')
             writer.add_scalar('eval_train_acc', accuracy, (epoch-1)*len(train_loader)+i)
             writer.add_scalar('eval_train_loss', loss.item(), (epoch-1)*len(train_loader)+i)
-
+            
         # Validate model
         resnet18.eval()
         t_losses = []
         t_acc = []
+        print('Evaluating on VAL data')
         with torch.no_grad():
-            y_true = np.zeros((0, 10))
-            y_score = np.zeros((0, 10))
             for i, (t_images, t_labels) in enumerate(val_loader):
                 t_images, t_labels = t_images.to(device), t_labels.to(device)
                 t_logits = resnet18(t_images)
                 t_pred = F.log_softmax(t_logits/T, dim=1)
-                t_pred_max = torch.argmax(t_pred.data, dim=1)
-                y_true = np.concatenate((y_true, t_pred.cpu().numpy()), axis=0)
-                y_score = np.concatenate((y_score, t_pred.cpu().numpy()), axis=0)
-                t_loss = criterion(t_logits, t_labels)
-                t_accuracy = (t_pred_max == t_labels).sum().data.numpy() / t_pred_max.size()[0]
+                t_pred_max = torch.argmax(t_pred, dim=1)
+                t_loss = criterion(t_pred, t_labels)
+                t_accuracy = (t_pred_max == t_labels).sum().item() / t_pred_max.size()[0]
                 t_losses.append(t_loss.item())
                 t_acc.append(t_accuracy)
-        resnet18.save_state_dict(os.path.join(curr_dir, 'mytraining.pt'))
 
         t_avg_acc = np.mean(t_acc)
         t_avg_loss = np.mean(t_losses)
+        
         print(f'Validation loss at the end of epoch {epoch}', t_avg_loss)
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
         writer.add_scalar('eval_val_loss', t_avg_loss, epoch-1)
         writer.add_scalar('eval_val_acc', t_avg_acc, epoch-1)
 
+        print('Saving the model')
+        torch.save(resnet18.state_dict(), os.path.join('models', f'resnet18_{T}_{run_time}.pt'))
 
 if __name__ == '__main__':
     train_resnet()
