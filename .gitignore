@@ -4,12 +4,13 @@ __pycache__/
 *$py.class
 
 # Dataset
-
 state-farm-distracted-driver-detection/
 
 # Tensorboard runs
-
 runs/
+
+# Pycharm
+.idea/
 
 # C extensions
 *.so
