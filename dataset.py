@@ -23,7 +23,6 @@ CLASSES = {
 
 class DistractedDriverDataset(Dataset):
 
-
 	def __init__(self, annotation_path, data_dir, transform=None):
 		self.annotation = pd.read_csv(annotation_path)
 		self.data_dir = data_dir
@@ -52,4 +51,25 @@ class DistractedDriverDataset(Dataset):
 		print('-'*40)
 		print(self.annotation.groupby(['subject']).agg(['count']))
 		print('-'*40)
+
+
+class DistractedDriverTestDataset(Dataset):
+
+	def __init__(self, data_dir, transform=None):
+		self.data_dir = data_dir
+		self.transform = transform
+		self.img_names = [i for i in os.listdir(self.data_dir) if i.endswith('.jpg')]
+
+	def __len__(self):
+		return len(self.annotation)
+
+	def __getitem__(self, idx):
+		img_name = self.img_names[idx]
+		img_path = os.path.join(self.data_dir, img_name)
+		img = Image.open(img_path)
+
+		if self.transform:
+			img = self.transform(img)
+
+		return img, label_int
 		

@@ -6,3 +6,4 @@ test_dir = os.path.join(curr_dir, "state-farm-distracted-driver-detection", "img
 
 T = 3
 n_classes = 10
+
