@@ -44,7 +44,6 @@ def load_data():
 
 def train_resnet():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     train_loader, val_loader = load_data()
     # Train model
     resnet18 = models.resnet18(pretrained=True)

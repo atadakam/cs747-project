@@ -3,15 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Dataset
-state-farm-distracted-driver-detection/
-
-# Tensorboard runs and models
-runs/
-models/
-
-# Pycharm
+# Idea
 .idea/
+
+# Dataset
+state-farm-distracted-driver-detection
 
 # C extensions
 *.so
@@ -137,6 +133,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-#images
-imgs/
