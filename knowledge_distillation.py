@@ -65,8 +65,8 @@ def train_student_plain():
             loss.backward()
             optimizer.step()
             accuracy = (pred_max == labels).sum().item() / pred_max.size()[0]
-            writer.add_scalar('student_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
-            writer.add_scalar('student_train_loss', loss.item(), (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('eval_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('eval_train_loss', loss.item(), (epoch - 1) * len(train_loader) + i)
 
         # Validate model
         model.eval()
@@ -89,8 +89,8 @@ def train_student_plain():
 
         print(f'Validation loss at the end of epoch {epoch}', t_avg_loss)
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
-        writer.add_scalar('student_val_loss', t_avg_loss, epoch - 1)
-        writer.add_scalar('student_val_acc', t_avg_acc, epoch - 1)
+        writer.add_scalar('eval_val_loss', t_avg_loss, epoch - 1)
+        writer.add_scalar('eval_val_acc', t_avg_acc, epoch - 1)
         print('Saving the model')
         torch.save(model.state_dict(), os.path.join('models', f'student_{T}_{run_time}.pt'))
 
@@ -152,9 +152,9 @@ def train_student_distilled():
             total_loss.backward()
             optimizer.step()
             accuracy = (pred_max == labels).sum().item() / pred_max.size()[0]
-            writer.add_scalar('student_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
-            writer.add_scalar('student_train_loss', loss_hard.item(), (epoch - 1) * len(train_loader) + i)
-            writer.add_scalar('student_soft_loss', loss_soft.item(), (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('eval_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('eval_train_loss', loss_hard.item(), (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('eval_soft_loss', loss_soft.item(), (epoch - 1) * len(train_loader) + i)
 
         # Validate model
         model.eval()
@@ -188,9 +188,9 @@ def train_student_distilled():
 
         print(f'Validation loss at the end of epoch {epoch}', t_avg_hard_loss)
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
-        writer.add_scalar('student_val_loss', t_avg_hard_loss, epoch - 1)
-        writer.add_scalar('student_val_acc', t_avg_acc, epoch - 1)
-        writer.add_scalar('student_val_soft_loss', t_avg_soft_loss, epoch - 1)
+        writer.add_scalar('eval_val_loss', t_avg_hard_loss, epoch - 1)
+        writer.add_scalar('eval_val_acc', t_avg_acc, epoch - 1)
+        writer.add_scalar('eval_val_soft_loss', t_avg_soft_loss, epoch - 1)
         print('Saving the model')
         torch.save(model.state_dict(), os.path.join('models', f'distilled_{T}_{run_time}.pt'))
 

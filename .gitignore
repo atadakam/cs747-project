@@ -6,6 +6,9 @@ __pycache__/
 # Idea
 .idea/
 
+# Runs
+runs/
+
 # Dataset
 state-farm-distracted-driver-detection
 
