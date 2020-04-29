@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 batch_size = 5
-num_epochs = 20
+num_epochs = 100
 learning_rate = 0.0001
 
 
@@ -49,7 +49,7 @@ def train_student_plain():
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     run_time = datetime.now().strftime(("%m-%d %H-%M"))
-    writer = SummaryWriter(os.path.join('runs', run_time))
+    writer = SummaryWriter(os.path.join('runs', "student_" + run_time))
 
     for epoch in range(1, num_epochs + 1):
         print(f'Starting epoch {epoch}')
@@ -95,17 +95,6 @@ def train_student_plain():
         torch.save(model.state_dict(), os.path.join('models', f'student_{T}_{run_time}.pt'))
 
 
-# class softCrossEntropy(nn.Module):
-#     def __init__(self):
-#         super(softCrossEntropy, self).__init__()
-#         self.logsoftmax = nn.LogSoftmax()
-#         return
-#
-#     def forward(self, inputs, target):
-#         return torch.mean(torch.sum(- target  self.logsoftmax(inputs), dim=1))
-
-#
-
 class softCrossEntropy(nn.Module):
     def __init__(self):
         super(softCrossEntropy, self).__init__()
@@ -123,7 +112,7 @@ def train_student_distilled():
     teacher_network = models.resnet18(pretrained=False)
     num_dim = teacher_network.fc.in_features
     teacher_network.fc = nn.Linear(num_dim, 10)
-    teacher_network.load_state_dict(torch.load(os.path.join(curr_dir, 'models', "resnet18_5_04-23 21-14.pt")))
+    teacher_network.load_state_dict(torch.load(os.path.join(curr_dir, 'models', "resnet18_3_04-26 22-38.pt")))
     teacher_network.eval()
     teacher_network = teacher_network.to(device)
 
@@ -134,7 +123,7 @@ def train_student_distilled():
     criterion_soft = softCrossEntropy()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     run_time = datetime.now().strftime(("%m-%d %H-%M"))
-    writer = SummaryWriter(os.path.join('runs', run_time))
+    writer = SummaryWriter(os.path.join('runs', "distilled_"+run_time))
 
     for epoch in range(1, num_epochs + 1):
         print(f'Starting epoch {epoch}')
@@ -164,11 +153,13 @@ def train_student_distilled():
             optimizer.step()
             accuracy = (pred_max == labels).sum().item() / pred_max.size()[0]
             writer.add_scalar('student_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
-            writer.add_scalar('student_train_loss', total_loss.item(), (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('student_train_loss', loss_hard.item(), (epoch - 1) * len(train_loader) + i)
+            writer.add_scalar('student_soft_loss', loss_soft.item(), (epoch - 1) * len(train_loader) + i)
 
         # Validate model
         model.eval()
-        t_losses = []
+        t_losses_soft = []
+        t_losses_hard = []
         t_acc = []
         print('Evaluating on VAL data')
         with torch.no_grad():
@@ -186,16 +177,20 @@ def train_student_distilled():
                 t_loss_soft = criterion_soft(t_logits, t_soft_targets) * (T**2)
                 t_total_loss = t_loss_hard + t_loss_soft
                 t_accuracy = (t_pred_max == t_labels).sum().item() / t_pred_max.size()[0]
-                t_losses.append(t_total_loss.item())
                 t_acc.append(t_accuracy)
+                t_losses_hard.append(t_loss_hard)
+                t_losses_soft.append(t_loss_soft)
 
         t_avg_acc = np.mean(t_acc)
-        t_avg_loss = np.mean(t_losses)
+        t_avg_hard_loss = np.mean(t_losses_hard)
+        t_avg_soft_loss = np.mean(t_losses_soft)
 
-        print(f'Validation loss at the end of epoch {epoch}', t_avg_loss)
+
+        print(f'Validation loss at the end of epoch {epoch}', t_avg_hard_loss)
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
-        writer.add_scalar('student_val_loss', t_avg_loss, epoch - 1)
+        writer.add_scalar('student_val_loss', t_avg_hard_loss, epoch - 1)
         writer.add_scalar('student_val_acc', t_avg_acc, epoch - 1)
+        writer.add_scalar('student_val_soft_loss', t_avg_soft_loss, epoch - 1)
         print('Saving the model')
         torch.save(model.state_dict(), os.path.join('models', f'distilled_{T}_{run_time}.pt'))
 

@@ -53,7 +53,7 @@ def train_resnet():
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(resnet18.parameters(), lr=learning_rate)
     run_time = datetime.now().strftime(("%m-%d %H-%M"))
-    writer = SummaryWriter(os.path.join('runs', run_time))
+    writer = SummaryWriter(os.path.join('runs', "teacher_"+run_time))
 
     for epoch in range(1, num_epochs + 1):
         print(f'Starting epoch {epoch}')
