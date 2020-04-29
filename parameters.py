@@ -4,6 +4,4 @@ annotation_path = os.path.join(curr_dir,"state-farm-distracted-driver-detection"
 train_dir = os.path.join(curr_dir, "state-farm-distracted-driver-detection", "imgs", "train")
 test_dir = os.path.join(curr_dir, "state-farm-distracted-driver-detection", "imgs", "test")
 
-T = 3
 n_classes = 10
-
