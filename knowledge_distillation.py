@@ -185,7 +185,6 @@ def train_student_distilled():
         t_avg_hard_loss = np.mean(t_losses_hard)
         t_avg_soft_loss = np.mean(t_losses_soft)
 
-
         print(f'Validation loss at the end of epoch {epoch}', t_avg_hard_loss)
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
         writer.add_scalar('eval_val_loss', t_avg_hard_loss, epoch - 1)
