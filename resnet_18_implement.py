@@ -1,50 +1,26 @@
-import sys
-from parameters import *
-from dataset import *
 import torch
-from torch.utils.data import random_split
+import tqdm
+import numpy as np
+from datetime import datetime
+
 import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms
 from torch import optim
 import torch.nn.functional as F
-import tqdm
-
-from datetime import datetime
+import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
 
-# Transforms applied to the training data
-
-
-# test_transform = transforms.Compose([ transforms.Resize(227),
-#             transforms.ToTensor(),
-#             normalize])
-
-batch_size = 32
-num_epochs = 2
-learning_rate = 0.0001
-
-def load_data():
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(227, scale=(0.5, 1.0)),
-            transforms.ToTensor(),
-            normalize
-        ])
-
-    train_dataset = DistractedDriverDataset(annotation_path, train_dir, transform=train_transform)
-    num_train = int(len(train_dataset)*0.8)
-    lengths = [num_train, len(train_dataset)-num_train]
-    train, val = random_split(train_dataset, lengths)
-    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=False)
-    return train_loader, val_loader
+from parameters import *
+from dataset import load_data
 
 
 def train_resnet():
+    batch_size = 32
+    num_epochs = 2
+    learning_rate = 0.0001
+    T = 3
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader = load_data()
+    train_loader, val_loader = load_data(batch_size)
     # Train model
     resnet18 = models.resnet18(pretrained=True)
     num_dim = resnet18.fc.in_features
@@ -52,7 +28,7 @@ def train_resnet():
     resnet18 = resnet18.to(device)
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(resnet18.parameters(), lr=learning_rate)
-    run_time = datetime.now().strftime(("%m-%d %H-%M"))
+    run_time = datetime.now().strftime("%m-%d %H-%M")
     writer = SummaryWriter(os.path.join('runs', "teacher_"+run_time))
 
     for epoch in range(1, num_epochs + 1):
