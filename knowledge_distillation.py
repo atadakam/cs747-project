@@ -149,7 +149,7 @@ def train_student_distilled():
     criterion_hard = nn.NLLLoss()
     criterion_soft = softCrossEntropy()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    run_time = datetime.now().strftime('%m-%d %H-%M')
+    run_time = datetime.now().strftime('%m-%d_%H-%M')
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
                                                            patience=10, factor=0.5,
