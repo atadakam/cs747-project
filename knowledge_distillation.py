@@ -130,7 +130,7 @@ def train_student_distilled():
 
     batch_size = 32
     num_epochs = 200
-    learning_rate = 0.0001
+    learning_rate = 0.01
     T = 3
     teacher_path = os.path.join(curr_dir, 'models', "resnet18_3_04-26 22-38.pt")
     prev_t_avg_hard_loss = float('inf')
@@ -151,11 +151,21 @@ def train_student_distilled():
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     run_time = datetime.now().strftime('%m-%d %H-%M')
 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
+                                                           patience=10, factor=0.5,
+                                                           threshold=0.02, verbose=True,
+                                                           cooldown=0)
+
     writer = SummaryWriter(os.path.join('runs', 'distilled_'+run_time))
 
     for epoch in range(1, num_epochs + 1):
         print(f'Starting epoch {epoch}')
         model.train()
+
+        for param_group in optimizer.param_groups:
+            lr = param_group['lr']
+
+        writer.add_scalar('param_lr', lr, epoch-1)
 
         for i, (images, labels) in tqdm.tqdm(enumerate(train_loader), total=len(train_loader)):
             images, labels = images.to(device), labels.to(device)
@@ -163,7 +173,6 @@ def train_student_distilled():
             logits = model(images)
             predict = F.log_softmax(logits, dim=1)
             pred_max = torch.argmax(predict, dim=1)
-
 
             # Hard target
             loss_hard = criterion_hard(predict, labels)
@@ -207,7 +216,6 @@ def train_student_distilled():
                 # Soft target
                 t_soft_targets = F.softmax(teacher_network(t_images), dim=1)
                 t_loss_soft = criterion_soft(t_logits, t_soft_targets) * (T**2)
-                t_total_loss = t_loss_hard + t_loss_soft
                 t_accuracy = (t_pred_max == t_labels).sum().item() / t_pred_max.size()[0]
                 t_acc.append(t_accuracy)
                 t_losses_hard.append(t_loss_hard.item())
@@ -216,20 +224,22 @@ def train_student_distilled():
         t_avg_acc = np.mean(t_acc)
         t_avg_hard_loss = np.mean(t_losses_hard)
         t_avg_soft_loss = np.mean(t_losses_soft)
-
+        t_avg_total_loss = np.mean(np.array(t_losses_hard) + np.array(t_losses_soft))
         print(f'Validation loss at the end of epoch {epoch}     : {t_avg_hard_loss:.4f}')
         print(f'Validation accuracy at the end of epoch {epoch} : {t_avg_acc:.4f}')
 
         writer.add_scalar('eval_val_loss', t_avg_hard_loss, epoch - 1)
         writer.add_scalar('eval_val_acc', t_avg_acc, epoch - 1)
         writer.add_scalar('eval_val_soft_loss', t_avg_soft_loss, epoch - 1)
-        writer.add_scalar('eval_val_total_loss', t_total_loss, epoch-1)
+        writer.add_scalar('eval_val_total_loss', t_avg_total_loss, epoch-1)
 
         # Check for best validation loss
         if t_avg_hard_loss < prev_t_avg_hard_loss:
             print('Saving best val loss model')
             torch.save(model.state_dict(), os.path.join('models', f'distilled_{T}_{run_time}_val.pt'))
             prev_t_avg_hard_loss = t_avg_hard_loss
+
+        scheduler.step(t_avg_hard_loss)
 
 
 if __name__ == '__main__':
