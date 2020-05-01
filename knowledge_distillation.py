@@ -54,28 +54,33 @@ def train_student_plain():
 
     batch_size = 32
     num_epochs = 200
-    learning_rate = 0.0001
+    learning_rate = 0.01
     prev_t_avg_loss = float('inf')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model  = Student_network()
+    model = Student_network()
     model = model.to(device)
     train_loader, val_loader = load_data(batch_size)
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    run_time = datetime.now().strftime(("%m-%d_%H-%M"))
+    run_time = datetime.now().strftime("%m-%d_%H-%M")
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
+                                                           patience=10, factor=0.5,
+                                                           threshold=0.02, verbose=True,
+                                                           cooldown=0)
+
     writer = SummaryWriter(os.path.join('runs', 'student_'+run_time))
 
     for epoch in range(1, num_epochs + 1):
-        if epoch == 50:
-            learning_rate = 0.5 * learning_rate
-
-        if epoch == 125:
-            learning_rate = 0.1 * learning_rate
-
         print(f'Starting epoch {epoch}')
         model.train()
+
+        for param_group in optimizer.param_groups:
+            lr = param_group['lr']
+
+        writer.add_scalar('param_lr', lr, epoch-1)
 
         for i, (images, labels) in tqdm.tqdm(enumerate(train_loader), total=len(train_loader)):
             images, labels = images.to(device), labels.to(device)
@@ -116,14 +121,14 @@ def train_student_plain():
         print(f'Validation accuracy at the end of epoch {epoch}', t_avg_acc)
         writer.add_scalar('eval_val_loss', t_avg_loss, epoch - 1)
         writer.add_scalar('eval_val_acc', t_avg_acc, epoch - 1)
-        print('Saving the model')
-        torch.save(model.state_dict(), os.path.join('models', f'student_{run_time}.pt'))
 
         # Check for best validation loss
         if t_avg_loss < prev_t_avg_loss:
             print('Saving best val loss model')
             torch.save(model.state_dict(), os.path.join('models', f'student_{run_time}_val.pt'))
             prev_t_avg_loss = t_avg_loss
+
+        scheduler.step(t_avg_loss)
 
 
 def train_student_distilled():
@@ -244,4 +249,5 @@ def train_student_distilled():
 
 
 if __name__ == '__main__':
-    train_student_distilled()
+    # train_student_distilled()
+    train_student_plain()
