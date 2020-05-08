@@ -5,10 +5,12 @@ import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import transforms, utils
+
 from torch.utils.data import random_split
 from torch.utils.data import Dataset, DataLoader
 
 from parameters import *
+
 
 CLASSES = {
     'c0': 'safe driving',
@@ -94,3 +96,4 @@ def load_data(batch_size):
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=False)
 
     return train_loader, val_loader
+

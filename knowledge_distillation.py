@@ -74,6 +74,12 @@ def train_student_plain():
     writer = SummaryWriter(os.path.join('runs', 'student_'+run_time))
 
     for epoch in range(1, num_epochs + 1):
+        if epoch == 50:
+            learning_rate = 0.5 * learning_rate
+
+        if epoch == 125:
+            learning_rate = 0.1 * learning_rate
+
         print(f'Starting epoch {epoch}')
         model.train()
 
@@ -94,6 +100,9 @@ def train_student_plain():
             accuracy = (pred_max == labels).sum().item() / pred_max.size()[0]
             writer.add_scalar('eval_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
             writer.add_scalar('eval_train_loss', loss.item(), (epoch - 1) * len(train_loader) + i)
+
+        print('Saving the model')
+        torch.save(model.state_dict(), os.path.join('models', f'student_{run_time}.pt'))
 
         print('Saving the model')
         torch.save(model.state_dict(), os.path.join('models', f'student_{run_time}.pt'))
@@ -139,6 +148,7 @@ def train_student_distilled():
     T = 3
     teacher_path = os.path.join(curr_dir, 'models', "resnet18_3_04-26 22-38.pt")
     prev_t_avg_hard_loss = float('inf')
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     teacher_network = models.resnet18(pretrained=False)
@@ -154,6 +164,7 @@ def train_student_distilled():
     criterion_hard = nn.NLLLoss()
     criterion_soft = softCrossEntropy()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
     run_time = datetime.now().strftime('%m-%d_%H-%M')
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
