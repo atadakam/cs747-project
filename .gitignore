@@ -9,6 +9,7 @@ __pycache__/
 # Runs
 runs/
 models/
+submissions/
 
 # Dataset
 state-farm-distracted-driver-detection
