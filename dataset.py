@@ -24,6 +24,19 @@ CLASSES = {
 }
 
 
+class MapDataset(torch.utils.data.Dataset):
+
+    def __init__(self, dataset, map_fn):
+        self.dataset = dataset
+        self.map = map_fn
+
+    def __getitem__(self, index):
+        return self.map(self.dataset[index])
+
+    def __len__(self):
+        return len(self.dataset)
+
+
 class DistractedDriverDataset(Dataset):
 
     def __init__(self, annotation_path, data_dir, transform=None):
@@ -82,6 +95,12 @@ def load_data(batch_size):
                                      std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(227, scale=(0.5, 1.0)),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
+        transforms.ToTensor(),
+        normalize
+    ])
+    test_transform = transforms.Compose([
+        transforms.Resize(227),
         transforms.ToTensor(),
         normalize
     ])
@@ -90,6 +109,10 @@ def load_data(batch_size):
     num_train = int(len(train_dataset) * 0.8)
     lengths = [num_train, len(train_dataset) - num_train]
     train, val = random_split(train_dataset, lengths)
+    # train.transform = train_transform
+    # val.transform = test_transform
+    # train = MapDataset(train, train_transform)
+    # val = MapDataset(val, test_transform)
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=False)
 

@@ -13,6 +13,11 @@ models/
 # Dataset
 state-farm-distracted-driver-detection
 
+# Csv files
+*.csv
+*.xls
+*.txt
+
 # C extensions
 *.so
 
