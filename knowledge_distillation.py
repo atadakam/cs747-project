@@ -63,7 +63,7 @@ def train_student_plain():
     run_time = datetime.now().strftime("%m-%d_%H-%M")
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
-                                                           patience=10, factor=0.5,
+                                                           patience=10, factor=0.2,
                                                            threshold=0.02, verbose=True,
                                                            cooldown=0)
 

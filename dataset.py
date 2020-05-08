@@ -96,8 +96,9 @@ def load_data(batch_size):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(227, scale=(0.5, 1.0)),
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
+        transforms.RandomRotation(15),
+        transforms.RandomResizedCrop(227, scale=(0.8, 1)),
         transforms.ToTensor(),
         normalize
     ])
@@ -120,3 +121,13 @@ def load_data(batch_size):
 
     return train_loader, val_loader
 
+
+if __name__ == '__main__':
+    t, v = load_data(1)
+    print(len(t))
+    for i, l in t:
+        print(l)
+        img = transforms.ToPILImage()(i[0])
+        plt.imshow(img)
+        plt.show()
+        plt.close()

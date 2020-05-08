@@ -8,16 +8,15 @@ from torch import optim
 import torch.nn.functional as F
 import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
-
 from parameters import *
 from dataset import load_data
 
-model_name = "resnet34"
+model_name = "resnet101"
 
 
 def model_teacher():
     # Train model
-    model = models.resnet34(pretrained=True)
+    model = models.resnet101(pretrained=True)
     num_dim = model.fc.in_features
     model.fc = nn.Linear(num_dim, 10)
     return model
