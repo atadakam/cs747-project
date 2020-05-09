@@ -28,7 +28,7 @@ def test_model(model, state_dict, save_path):
         ])
 
     test_data = DistractedDriverTestDataset(test_dir, transform=test_transform)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=4)
 
     output_data = []
 
@@ -66,8 +66,10 @@ def test_model(model, state_dict, save_path):
 
 if __name__ == '__main__':
     import os
-    from attention_model import ResNetAttention
-    model = 'att_lstm_05-03_00-25_val.pt'
-    submission_path = os.path.join('submissions', model[:-3] + '.csv')
-    state_dict = torch.load(os.path.join('models', model))
-    test_model(model=ResNetAttention, state_dict=state_dict, save_path=submission_path)
+    from attention_model import ResNetAttention2
+    model_ckpt = 'ResNet18_att_softmax_05-09_15-27_val.pt'
+    submission_path = os.path.join('submissions', model_ckpt[:-3] + '.csv')
+
+    state_dict = torch.load(os.path.join('models', model_ckpt))
+    model = ResNetAttention2()
+    test_model(model=model, state_dict=state_dict, save_path=submission_path)
