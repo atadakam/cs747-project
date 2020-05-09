@@ -55,21 +55,21 @@ class ResNetAttention1(nn.Module):
         # Prepare dims for Recurrent
         x_channel = x.shape[1]
         x_batch_size = x.shape[0]
-        x_att_in = x.permute(0, 2, 3, 1)                        # N, H, W, channels
-        x_att_in = x_att_in.view(x_batch_size, -1, x_channel)   # N, H*W, channels
-        x_att_in = x_att_in.permute(1, 0, 2)                    # H*W, N, channels
+        x_att_in = x.permute(0, 2, 3, 1)                        # N, H, W, C
+        x_att_in = x_att_in.view(x_batch_size, -1, x_channel)   # N, H*W, C
+        x_att_in = x_att_in.permute(1, 0, 2)                    # H*W, N, C
 
         # Recurrent
-        att_vec, _ = self.recurrent(x_att_in)                            # H*W, batch, embedding
+        att_vec, _ = self.recurrent(x_att_in)                            # H*W, N, embedding
 
         # Single Normalized Attention Extraction from Recurrent Embedded Vec
         att_vec_flat = att_vec.view(-1, self.effective_rnn_hidden_dim)
-        att = F.relu(self.att_extractor(att_vec_flat))              # h*w*batch, 1
-        att = att.view(-1, x_batch_size)                            # h*w, batch
+        att = F.relu(self.att_extractor(att_vec_flat))              # H*W*N, 1
+        att = att.view(-1, x_batch_size)                            # H*W, N
         att = F.normalize(att, p=1, dim=0)
 
-        att = att.view(x.shape[2], x.shape[3], x_batch_size, 1)
-        att = att.permute(2, 3, 0, 1)
+        att = att.view(x.shape[2], x.shape[3], x_batch_size, 1)     # H, W, N, 1
+        att = att.permute(2, 3, 0, 1)                               # N, 1, H, W
 
         x = x*att
         x = F.relu(self.att_conv(x))
@@ -142,13 +142,10 @@ class ResNetAttention2(nn.Module):
         att_vec_flat = att_vec.view(-1, self.effective_rnn_hidden_dim)  # H * W * N, embedding
         att = self.att_extractor(att_vec_flat)                          # H * W * N, 1
 
-        # Pre-softmax values for loss calculation
-        att_matrix = att.view(x.shape[2], x.shape[3], x_batch_size, 1)  # H * W * N, 1
-
         att = att.view(-1, x_batch_size)                                # H * W, N
         att = F.softmax(att, dim=0)
-        att = att.view(x.shape[2], x.shape[3], x_batch_size, 1)         # H * W * N, 1
-        att = att.permute(2, 3, 0, 1)
+        att = att.view(x.shape[2], x.shape[3], x_batch_size, 1)         # H, W, N, 1
+        att = att.permute(2, 3, 0, 1)                                   # N, 1, H, W
 
         x = x*att
         x = F.relu(self.att_conv(x))
@@ -156,7 +153,7 @@ class ResNetAttention2(nn.Module):
         x = torch.flatten(x, 1)
         x = self.resnet.fc(x)
 
-        return {'logits': x, 'att': att_matrix}
+        return {'logits': x, 'att': att}
 
 
 if __name__ == '__main__':
