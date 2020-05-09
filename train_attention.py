@@ -41,7 +41,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
     else:
         run_id = datetime.now().strftime("%m-%d_%H-%M")
 
-    model_prefix = 'att_lstm'
+    model_prefix = model.model_name
     model_id = f'{model_prefix}_{run_id}'
 
     # SETUP LOGGERS
@@ -57,7 +57,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
     writer = SummaryWriter(os.path.join(output_dir, 'runs',  f'{model_id}'))
 
     # START TRAINING
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(num_epochs):
         logging.info(f'Starting epoch {epoch}')
         model.train()
 
@@ -75,15 +75,19 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
             predict = F.log_softmax(logits, dim=1)
             pred_max = torch.argmax(predict, dim=1)
             loss = criterion(predict, labels)
+            writer.add_scalar('eval_train_loss', loss.item(), epoch * len(train_loader) + i)
 
             if entropy_att_loss:
-                loss = loss + criterion2(att) * entropy_loss_coeff
-
+                loss_entropy = criterion2(att)
+                loss = loss + loss_entropy * entropy_loss_coeff
+                writer.add_scalar('eval_train_att_entropy_loss', loss_entropy.item(), epoch * len(train_loader) + i)
+                writer.add_scalar('eval_train_total_loss', loss.item(), epoch * len(train_loader) + i)
             loss.backward()
             optimizer.step()
+
             accuracy = (pred_max == labels).sum().item() / pred_max.size()[0]
-            writer.add_scalar('eval_train_acc', accuracy, (epoch - 1) * len(train_loader) + i)
-            writer.add_scalar('eval_train_loss', loss.item(), (epoch - 1) * len(train_loader) + i)
+
+            writer.add_scalar('eval_train_acc', accuracy, epoch * len(train_loader) + i)
 
         logging.info('Saving the model')
         torch.save(model.state_dict(), os.path.join(output_dir, 'models', f'{model_id}.pt'))
@@ -109,8 +113,8 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
 
         logging.info(f'Validation loss at the end of epoch {epoch}     : {t_avg_loss:.4f}')
         logging.info(f'Validation accuracy at the end of epoch {epoch} : {t_avg_acc:.4f}')
-        writer.add_scalar('eval_val_loss', t_avg_loss, epoch - 1)
-        writer.add_scalar('eval_val_acc', t_avg_acc, epoch - 1)
+        writer.add_scalar('eval_val_loss', t_avg_loss, epoch)
+        writer.add_scalar('eval_val_acc', t_avg_acc, epoch)
 
         # Check for best validation loss
         if t_avg_loss < prev_t_avg_loss:
@@ -126,15 +130,17 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model', '-m', help='Attention model to train', choices=['resnet18_relu', 'resnet18_softmax'])
+    parser.add_argument('--model', '-m', help='Attention model to train', choices=['resnet18_relu', 'resnet18_softmax'],
+                        default='resnet18_softmax')
     parser.add_argument('--output_dir', '-o', help='Path to root folder for saving output files', default='.')
     parser.add_argument('--batch_size', '-bs', help='Batch size', default='32', type=int)
     parser.add_argument('--epochs', '-e', help='Epochs', default='150', type=int)
     parser.add_argument('--learning_rate', '-lr', help='Learning rate', default='0.01', type=float)
-    parser.add_argument('--entropy_loss', help='Flat to calculate entropy loss function of attention',
-                        default=False, type=bool)
-    parser.add_argument('--entropy_loss_coeff', help='Flat to calculate entropy loss function of attention',
-                        default=0.3, type=float)
+    parser.add_argument('--entropy_loss_flag', '-ef',
+                        help='Flag to calculate entropy loss function of attention (default=False)',
+                        default=False, action='store_true')
+    parser.add_argument('--entropy_loss_coeff', '-efc', help='Coefficient of entropy loss in total loss calculation',
+                        default=0.3, type=float, metavar='COEFFICIENT')
     args = parser.parse_args()
 
     if args.model == 'resnet18_relu':
@@ -145,5 +151,5 @@ if __name__ == '__main__':
         raise ValueError(f'Invalid model {args.model}')
 
     train_attention(att_model=model, output_dir=args.output_dir, batch_size=args.batch_size, num_epochs=args.epochs,
-                    learning_rate=args.learning_rate, entropy_att_loss=args.entropy_loss,
+                    learning_rate=args.learning_rate, entropy_att_loss=args.entropy_loss_flag,
                     entropy_loss_coeff=args.entropy_loss_coeff)
