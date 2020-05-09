@@ -64,7 +64,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
         for param_group in optimizer.param_groups:
             lr = param_group['lr']
 
-        writer.add_scalar('param_lr', lr, epoch-1)
+        writer.add_scalar('param_lr', lr, epoch)
 
         for i, (images, labels) in tqdm.tqdm(enumerate(train_loader), total=len(train_loader)):
             images, labels = images.to(device), labels.to(device)

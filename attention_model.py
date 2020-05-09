@@ -83,7 +83,7 @@ class ResNetAttention1(nn.Module):
 class ResNetAttention2(nn.Module):
     def __init__(self):
         super(ResNetAttention2, self).__init__()
-        self.model_name = 'resnet18_att_softmax'
+        self.model_name = 'ResNet18_att_softmax'
         self.resnet = models.resnet18(pretrained=True)
         self.resnet_embedding_dim = self.resnet.fc.in_features
 
