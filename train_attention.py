@@ -36,7 +36,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
                                                            cooldown=0)
 
     # SETUP IDs
-    if "SLURM_ARRAY_TASK_ID" in os.environ:
+    if "SLURM_JOB_ID" in os.environ:
         run_id = int(os.environ["SLURM_JOB_ID"])
     else:
         run_id = datetime.now().strftime("%m-%d_%H-%M")
