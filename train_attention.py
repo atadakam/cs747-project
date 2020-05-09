@@ -25,9 +25,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
     model = model.to(device)
     train_loader, val_loader = load_data(batch_size)
     criterion = nn.NLLLoss()
-
-    if entropy_att_loss:
-        criterion2 = EntropyLoss()
+    criterion2 = EntropyLoss()
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
@@ -77,10 +75,11 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
             loss = criterion(predict, labels)
             writer.add_scalar('eval_train_loss', loss.item(), epoch * len(train_loader) + i)
 
+            loss_entropy = criterion2(att)
+            writer.add_scalar('eval_train_att_entropy_loss', loss_entropy.item(), epoch * len(train_loader) + i)
+
             if entropy_att_loss:
-                loss_entropy = criterion2(att)
                 loss = loss + loss_entropy * entropy_loss_coeff
-                writer.add_scalar('eval_train_att_entropy_loss', loss_entropy.item(), epoch * len(train_loader) + i)
                 writer.add_scalar('eval_train_total_loss', loss.item(), epoch * len(train_loader) + i)
             loss.backward()
             optimizer.step()
@@ -98,6 +97,7 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
         val_losses_entropy = []
         val_acc = []
         logging.info('Evaluating on VAL data')
+
         with torch.no_grad():
             for i, (val_images, val_labels) in enumerate(val_loader):
                 val_images, val_labels = val_images.to(device), val_labels.to(device)
@@ -107,30 +107,33 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
                 val_pred = F.log_softmax(val_logits, dim=1)
                 val_pred_max = torch.argmax(val_pred, dim=1)
                 val_loss = criterion(val_pred, val_labels)
-                if entropy_att_loss:
-                    val_loss_entropy = criterion2(val_att)
-                    val_losses_entropy.append(val_loss_entropy.item())
+                val_loss_entropy = criterion2(val_att)
+                val_losses_entropy.append(val_loss_entropy.item())
                 val_accuracy = (val_pred_max == val_labels).sum().item() / val_pred_max.size()[0]
                 val_losses.append(val_loss.item())
                 val_acc.append(val_accuracy)
 
-        val_avg_acc = np.mean(val_acc)
-        val_avg_loss = np.mean(val_losses)
-        if entropy_att_loss:
+            val_avg_acc = np.mean(val_acc)
+            val_avg_loss = np.mean(val_losses)
             val_avg_entropy_loss = np.mean(np.array(val_losses_entropy))
-            val_avg_total_loss = np.mean(np.array(val_losses) + entropy_loss_coeff * np.array(val_losses_entropy))
-            logging.info(f'Validation entropy loss at the end of epoch {epoch}   : {val_avg_entropy_loss:.4f}')
-            logging.info(f'Validation total loss at the end of epoch {epoch}     : {val_avg_total_loss:.4f}')
+
             writer.add_scalar('eval_val_att_entropy_loss', val_avg_entropy_loss, epoch)
-            writer.add_scalar('eval_val_total_loss', val_avg_total_loss, epoch)
+            writer.add_scalar('eval_val_loss', val_avg_loss, epoch)
+            writer.add_scalar('eval_val_acc', val_avg_acc, epoch)
+
+            logging.info(f'Validation entropy loss at the end of epoch {epoch}   : {val_avg_entropy_loss:.4f}')
+            logging.info(f'Validation loss at the end of epoch {epoch}     : {val_avg_loss:.4f}')
+            logging.info(f'Validation accuracy at the end of epoch {epoch} : {val_avg_acc:.4f}')
+
+            if entropy_att_loss:
+                val_avg_total_loss = np.mean(np.array(val_losses) + entropy_loss_coeff * np.array(val_losses_entropy))
+                logging.info(f'Validation total loss at the end of epoch {epoch}     : {val_avg_total_loss:.4f}')
+                writer.add_scalar('eval_val_total_loss', val_avg_total_loss, epoch)
+
+        if entropy_att_loss:
             scheduler.step(val_avg_total_loss)
         else:
             scheduler.step(val_avg_loss)
-
-        logging.info(f'Validation loss at the end of epoch {epoch}     : {val_avg_loss:.4f}')
-        logging.info(f'Validation accuracy at the end of epoch {epoch} : {val_avg_acc:.4f}')
-        writer.add_scalar('eval_val_loss', val_avg_loss, epoch)
-        writer.add_scalar('eval_val_acc', val_avg_acc, epoch)
 
         # Check for best validation loss
         if val_avg_loss < prev_val_avg_loss:
