@@ -143,11 +143,12 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
 
 
 if __name__ == '__main__':
-    from attention_model import ResNetAttention1, ResNetAttention2
+    from attention_model import ResNetAttention1, ResNetAttention2, ResNetAttention3, ResNetAttention4
     import argparse
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model', '-m', help='Attention model to train', choices=['resnet18_relu', 'resnet18_softmax'],
+    parser.add_argument('--model', '-m', help='Attention model to train',
+                        choices=['resnet18_relu', 'resnet18_softmax', 'resnet18_relu_fc'],
                         default='resnet18_softmax')
     parser.add_argument('--output_dir', '-o', help='Path to root folder for saving output files', default='.')
     parser.add_argument('--batch_size', '-bs', help='Batch size', default='32', type=int)
@@ -165,6 +166,10 @@ if __name__ == '__main__':
         model = ResNetAttention1()
     elif args.model == 'resnet18_softmax':
         model = ResNetAttention2()
+    elif args.model == 'resnet18_relu_fc':
+        model = ResNetAttention3()
+    elif args.model == 'resnet18_softmax_fc':
+        model = ResNetAttention4()
     else:
         raise ValueError(f'Invalid model {args.model}')
 
