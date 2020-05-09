@@ -7,8 +7,9 @@ class EntropyLoss(nn.Module):
         super(EntropyLoss, self).__init__()
 
     def forward(self, x):
-        x = x.view(-1, x.shape[2])
-        e = F.softmax(x, dim=0)*F.log_softmax(x, dim=0)
-        loss = -1 * e.sum()/x.shape[2]
+        # N, 1, H, W
+        x = x.view(-1, x.shape[2]*x.shape[3])
+        e = F.softmax(x, dim=1)*F.log_softmax(x, dim=1)
+        loss = -1 * e.sum()/x.shape[0]
 
         return loss
