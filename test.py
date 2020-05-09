@@ -40,14 +40,16 @@ def test_model(model_class, state_dict, save_path):
             for name, score in zip(img_names, pred):
                 output_row = [name] + score
                 output_data.append(output_row)
-            # if i == 50:
-            #     break
+
     output_df = pd.DataFrame(data=output_data,
                              columns=['img', 'c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7','c8', 'c9'])
     output_df.to_csv(save_path, index=False)
 
 
 if __name__ == '__main__':
-    from resnet_18_implement import model_resnet
-    state_dict = torch.load('models/resnet18_3_04-26 22-38.pt')
-    test_model(model_class=model_resnet, state_dict=state_dict, save_path='submissions.csv')
+    import os
+    from knowledge_distillation import Student_network
+    model = 'distilled_3_04-29 22-10_val.pt'
+    submission_path = os.path.join('submissions', model[:-3] + '.csv')
+    state_dict = torch.load(os.path.join('models', model))
+    test_model(model_class=Student_network, state_dict=state_dict, save_path=submission_path)
