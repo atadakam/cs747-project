@@ -1,14 +1,13 @@
 import tqdm
 import numpy as np
 from datetime import datetime
-
 import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
 import torchvision.models as models
 from torch.utils.tensorboard import SummaryWriter
-
+from resnet_18_implement import model_resnet
 from dataset import load_data
 from parameters import *
 
@@ -51,23 +50,20 @@ class softCrossEntropy(nn.Module):
 
 
 def train_student_plain():
-
     batch_size = 32
     num_epochs = 200
     learning_rate = 0.01
     prev_t_avg_loss = float('inf')
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Student_network()
     model = model.to(device)
     train_loader, val_loader = load_data(batch_size)
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
     run_time = datetime.now().strftime("%m-%d_%H-%M")
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
-                                                           patience=10, factor=0.5,
+                                                           patience=10, factor=0.2,
                                                            threshold=0.02, verbose=True,
                                                            cooldown=0)
 
@@ -151,9 +147,7 @@ def train_student_distilled():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    teacher_network = models.resnet18(pretrained=False)
-    num_dim = teacher_network.fc.in_features
-    teacher_network.fc = nn.Linear(num_dim, 10)
+    teacher_network = model_resnet()
     teacher_network.load_state_dict(torch.load(teacher_path))
     teacher_network.eval()
     teacher_network = teacher_network.to(device)
