@@ -18,7 +18,7 @@ from loss import EntropyLoss
 def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate,
                     entropy_att_loss=False, entropy_loss_coeff=0.3):
 
-    prev_t_avg_loss = float('inf')
+    prev_val_avg_loss = float('inf')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = att_model
@@ -94,35 +94,49 @@ def train_attention(att_model, output_dir, batch_size, num_epochs, learning_rate
 
         # Validate model
         model.eval()
-        t_losses = []
-        t_acc = []
+        val_losses = []
+        val_losses_entropy = []
+        val_acc = []
         logging.info('Evaluating on VAL data')
         with torch.no_grad():
-            for i, (t_images, t_labels) in enumerate(val_loader):
-                t_images, t_labels = t_images.to(device), t_labels.to(device)
-                t_logits, t_att = model(t_images)
-                t_pred = F.log_softmax(t_logits, dim=1)
-                t_pred_max = torch.argmax(t_pred, dim=1)
-                t_loss = criterion(t_pred, t_labels)
-                t_accuracy = (t_pred_max == t_labels).sum().item() / t_pred_max.size()[0]
-                t_losses.append(t_loss.item())
-                t_acc.append(t_accuracy)
+            for i, (val_images, val_labels) in enumerate(val_loader):
+                val_images, val_labels = val_images.to(device), val_labels.to(device)
+                output = model(val_images)
+                val_logits = output['logits']
+                val_att = output['att']
+                val_pred = F.log_softmax(val_logits, dim=1)
+                val_pred_max = torch.argmax(val_pred, dim=1)
+                val_loss = criterion(val_pred, val_labels)
+                if entropy_att_loss:
+                    val_loss_entropy = criterion2(val_att)
+                    val_losses_entropy.append(val_loss_entropy.item())
+                val_accuracy = (val_pred_max == val_labels).sum().item() / val_pred_max.size()[0]
+                val_losses.append(val_loss.item())
+                val_acc.append(val_accuracy)
 
-        t_avg_acc = np.mean(t_acc)
-        t_avg_loss = np.mean(t_losses)
+        val_avg_acc = np.mean(val_acc)
+        val_avg_loss = np.mean(val_losses)
+        if entropy_att_loss:
+            val_avg_entropy_loss = np.mean(np.array(val_losses_entropy))
+            val_avg_total_loss = np.mean(np.array(val_losses) + entropy_loss_coeff * np.array(val_losses_entropy))
+            logging.info(f'Validation entropy loss at the end of epoch {epoch}   : {val_avg_entropy_loss:.4f}')
+            logging.info(f'Validation total loss at the end of epoch {epoch}     : {val_avg_total_loss:.4f}')
+            writer.add_scalar('eval_val_att_entropy_loss', val_avg_entropy_loss, epoch)
+            writer.add_scalar('eval_val_total_loss', val_avg_total_loss, epoch)
+            scheduler.step(val_avg_total_loss)
+        else:
+            scheduler.step(val_avg_loss)
 
-        logging.info(f'Validation loss at the end of epoch {epoch}     : {t_avg_loss:.4f}')
-        logging.info(f'Validation accuracy at the end of epoch {epoch} : {t_avg_acc:.4f}')
-        writer.add_scalar('eval_val_loss', t_avg_loss, epoch)
-        writer.add_scalar('eval_val_acc', t_avg_acc, epoch)
+        logging.info(f'Validation loss at the end of epoch {epoch}     : {val_avg_loss:.4f}')
+        logging.info(f'Validation accuracy at the end of epoch {epoch} : {val_avg_acc:.4f}')
+        writer.add_scalar('eval_val_loss', val_avg_loss, epoch)
+        writer.add_scalar('eval_val_acc', val_avg_acc, epoch)
 
         # Check for best validation loss
-        if t_avg_loss < prev_t_avg_loss:
+        if val_avg_loss < prev_val_avg_loss:
             logging.info('Saving best val loss model')
             torch.save(model.state_dict(), os.path.join(output_dir, 'models', f'{model_id}_val.pt'))
-            prev_t_avg_loss = t_avg_loss
-
-        scheduler.step(t_avg_loss)
+            prev_val_avg_loss = val_avg_loss
 
 
 if __name__ == '__main__':
