@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--model', '-m', help='Attention model to train',
-                        choices=['resnet18_relu', 'resnet18_softmax', 'resnet18_relu_fc'],
+                        choices=['resnet18_relu', 'resnet18_softmax', 'resnet18_relu_fc', 'resnet18_softmax_fc'],
                         default='resnet18_softmax')
     parser.add_argument('--output_dir', '-o', help='Path to root folder for saving output files', default='.')
     parser.add_argument('--batch_size', '-bs', help='Batch size', default='32', type=int)
